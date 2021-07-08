@@ -1,0 +1,58 @@
+version: '3'
+services:
+  mysql:
+    image: mysql:8.0
+    restart: always
+    volumes:
+      - "./data/mysql/db:/var/lib/mysql"
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      TZ: "Asia/Tokyo"
+    ports:
+      - "3306:3306"
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    build: ./data/phpmyadmin
+    environment:
+      - PMA_ARBITRARY=1
+      - PMA_HOST=mysql
+      - PMA_USER=root
+      - PMA_PASSWORD=password
+    links:
+      - mysql
+    ports:
+       - "8080:80"
+    volumes:
+       - "/sessions"
+       - "./data/phpmyadmin/conf.d:/usr/local/etc/php/conf.d"
+  nginx:
+    restart: always
+    build: ./data/nginx
+    image: "nginx"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "./data/nginx/conf:/etc/nginx"
+      - "./data/nginx/log:/var/log/nginx/"
+      - "./data/htdocs:/var/www/html"
+    environment:
+      TZ: "Asia/Tokyo"
+    depends_on:
+      - phpfpm
+    links:
+      - phpfpm
+  phpfpm:
+    image: php:7.4-fpm-alpine
+    build: ./data/phpfpm/
+    ports:
+      - "9000:9000"
+    environment:
+      TZ: "Asia/Tokyo"
+    volumes:
+      - "./data/htdocs:/var/www/html"
+      - "./data/phpfpm/conf:/usr/local/etc/php"
+    depends_on:
+      - mysql
+    links:
+      - mysql
